@@ -1,0 +1,89 @@
+/* Font dan animasi global */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Animasi */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.pop-in {
+  animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+}
+
+.bounce-in {
+  animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3) translateZ(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) translateZ(0);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.9) translateZ(0);
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+  }
+}
+
+/* Styling Daun */
+.leaf {
+  transition: all 0.3s ease-out;
+  will-change: transform, box-shadow;
+}
+
+.leaf:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Styling Pop-up */
+.pop-up-card {
+  /* Warna latar belakang dan bayangan yang lebih cerah */
+  background-color: #fff;
+  border-radius: 1.5rem; /* Sudut lebih membulat */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15), 0 6px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Styling Pohon */
+#leaves-container {
+  background-image: url('../img/pohon.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Styling Screen */
+.screen {
+  transition: opacity 0.5s ease-in-out;
+}
