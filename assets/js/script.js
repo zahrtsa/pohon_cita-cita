@@ -289,16 +289,18 @@ function renderLeaves() {
 }
 
 // === draggable with DB update on drop ===
+// === draggable with DB update on drop ===
 function makeDraggableWithUpdate(el) {
     let initialX, initialY, startLeft, startTop;
 
     el.onpointerdown = (e) => {
         // Cek apakah target bukan elemen anak (nama atau cita-cita)
         if (e.target.closest('.leaf-name') || e.target.closest('.leaf-cita')) {
-            isDragging = false;
+            isDragging = false; // Memastikan tidak terjadi drag jika klik pada teks
             return;
         }
 
+        // Ini akan berjalan saat disentuh/diklik
         isDragging = false; // Reset flag
         initialX = e.clientX;
         initialY = e.clientY;
@@ -314,7 +316,11 @@ function makeDraggableWithUpdate(el) {
 
     function moveDrag(e) {
         e.preventDefault();
-        isDragging = true; // Set flag jika pointer bergerak
+        // Set isDragging ke true hanya jika ada pergerakan yang signifikan
+        if (Math.abs(e.clientX - initialX) > 5 || Math.abs(e.clientY - initialY) > 5) {
+            isDragging = true;
+        }
+        
         let newLeft = startLeft + (e.clientX - initialX);
         let newTop = startTop + (e.clientY - initialY);
         
@@ -336,9 +342,8 @@ function makeDraggableWithUpdate(el) {
         el.style.cursor = "grab";
         
         const key = el.dataset.key;
-        if (key && currentKelas && isDragging) {
+        if (key && currentKelas && isDragging) { // Hanya update posisi jika ada pergerakan
             const container = el.parentElement;
-            // Ubah posisi piksel ke persentase
             const topPerc = (el.offsetTop / container.clientHeight) * 100;
             const leftPerc = (el.offsetLeft / container.clientWidth) * 100;
 
@@ -350,9 +355,21 @@ function makeDraggableWithUpdate(el) {
             update(ref(db, `pohon/${currentKelas}/${key}`), updated).catch(console.error);
         }
         
-        // Reset flag isDragging setelah selesai, dengan sedikit delay
-        setTimeout(() => isDragging = false, 50);
+        // Reset flag isDragging setelah selesai
+        isDragging = false;
     }
+    
+    // Perbaikan: gunakan event 'click' atau 'touchend' yang terpisah
+    // Namun, pastikan event 'click' tidak terpicu saat 'drag'
+    // Logika `isDragging` di atas sudah membantu, tapi kita bisa pastikan
+    // dengan menambahkan return di `onclick` jika `isDragging` true.
+    el.onclick = (e) => {
+        if (isDragging) return; // Penting: Jangan jalankan pop-up jika sedang menyeret
+        e.stopPropagation();
+        const leafData = leavesData[parseInt(el.dataset.index)];
+        const leafColor = leafData.warna;
+        showAspirationPopup((leafData.cita || "").toLowerCase(), leafData.cita, leafColor);
+    };
 }
 
 
