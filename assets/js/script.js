@@ -43,36 +43,36 @@ const namaBorderMap = {
 
 // === Tambahan: mapping warna SweetAlert ===
 const sweetAlertColorMap = {
-  red: {
-    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-    title: '#b91c1c',
-    text: '#991b1b',
-    button: '#dc2626'
-  },
-  yellow: {
-    background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-    title: '#b45309',
-    text: '#92400e',
-    button: '#f59e0b'
-  },
-  green: {
-    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-    title: '#166534',
-    text: '#14532d',
-    button: '#22c55e'
-  },
-  blue: {
-    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-    title: '#1e40af',
-    text: '#1e3a8a',
-    button: '#3b82f6'
-  },
-  purple: {
-    background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
-    title: '#6b21a8',
-    text: '#581c87',
-    button: '#8b5cf6'
-  }
+    red: {
+        background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+        title: '#b91c1c',
+        text: '#991b1b',
+        button: '#dc2626'
+    },
+    yellow: {
+        background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+        title: '#b45309',
+        text: '#92400e',
+        button: '#f59e0b'
+    },
+    green: {
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+        title: '#166534',
+        text: '#14532d',
+        button: '#22c55e'
+    },
+    blue: {
+        background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+        title: '#1e40af',
+        text: '#1e3a8a',
+        button: '#3b82f6'
+    },
+    purple: {
+        background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+        title: '#6b21a8',
+        text: '#581c87',
+        button: '#8b5cf6'
+    }
 };
 
 // === data penjelasan ===
@@ -161,7 +161,7 @@ const resetTreeBtn = document.getElementById("resetTreeBtn");
 let currentKelas = null;
 let leavesData = [];
 let tempCustomLeafData = {};
-let isDragging = false; // Flag baru untuk membedakan klik dan drag
+let isDragging = false;
 let unsubscribeListener = null;
 
 // ---- small helpers ----
@@ -253,26 +253,29 @@ function renderLeaves() {
             leafEl.style.background = "#6ee7b7";
             leafEl.style.color = "#064e3b";
         }
+
+        // PERHATIAN: Perhitungan posisi daun yang diperbarui
         if (!leaf.top || !leaf.left) {
-            const topPx = Math.max(8, Math.random() * (leavesContainer.clientHeight - 60));
-            const leftPx = Math.max(8, Math.random() * (leavesContainer.clientWidth - 120));
-            leaf.top = `${topPx}px`;
-            leaf.left = `${leftPx}px`;
+            // Gunakan persentase untuk posisi awal
+            const topPerc = Math.min(95, Math.max(5, Math.random() * 100));
+            const leftPerc = Math.min(95, Math.max(5, Math.random() * 100));
+            leaf.top = `${topPerc}%`;
+            leaf.left = `${leftPerc}%`;
             if (leaf.key && currentKelas) {
                 update(ref(db, `pohon/${currentKelas}/${leaf.key}`), { top: leaf.top, left: leaf.left }).catch(console.error);
             }
         }
         leafEl.style.top = leaf.top;
         leafEl.style.left = leaf.left;
+        
         const namaBorderColor = namaBorderMap[leaf.warna] || "#ccc";
         leafEl.innerHTML = `
-            <span class="leaf-name" style="border-color: ${namaBorderColor};">${escapeHtml(leaf.nama || "")}</span>
+            <span class="leaf-name" style="border-color: ${escapeHtml(namaBorderColor)};">${escapeHtml(leaf.nama || "")}</span>
             <span class="leaf-cita">${escapeHtml(leaf.cita || "")}</span>
         `;
         leafEl.dataset.key = leaf.key || "";
         leafEl.dataset.index = index;
         
-        // --- LOGIKA KLIK DAN DRAG YANG BARU ---
         leafEl.onclick = (e) => {
             if (isDragging) return;
             e.stopPropagation();
@@ -287,109 +290,129 @@ function renderLeaves() {
 
 // === draggable with DB update on drop ===
 function makeDraggableWithUpdate(el) {
-    let pos1 = 0, pos2 = 0, initialX = 0, initialY = 0, startLeft = 0, startTop = 0;
-    el.style.position = "absolute";
+    let initialX, initialY, startLeft, startTop;
+
     el.onpointerdown = (e) => {
-        isDragging = true; // Tandai sebagai sedang drag
-        e.stopPropagation();
+        // Cek apakah target bukan elemen anak (nama atau cita-cita)
+        if (e.target.closest('.leaf-name') || e.target.closest('.leaf-cita')) {
+            isDragging = false;
+            return;
+        }
+
+        isDragging = false; // Reset flag
         initialX = e.clientX;
         initialY = e.clientY;
         startLeft = el.offsetLeft;
         startTop = el.offsetTop;
+        
         document.onpointerup = closeDrag;
         document.onpointermove = moveDrag;
         document.onpointercancel = closeDrag;
         el.style.cursor = "grabbing";
         if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
     };
+
     function moveDrag(e) {
         e.preventDefault();
-        pos1 = e.clientX - initialX;
-        pos2 = e.clientY - initialY;
-        let newLeft = startLeft + pos1;
-        let newTop = startTop + pos2;
+        isDragging = true; // Set flag jika pointer bergerak
+        let newLeft = startLeft + (e.clientX - initialX);
+        let newTop = startTop + (e.clientY - initialY);
+        
         const container = el.parentElement;
         const maxLeft = container.clientWidth - el.offsetWidth;
         const maxTop = container.clientHeight - el.offsetHeight;
+        
         newLeft = Math.min(Math.max(0, newLeft), maxLeft);
         newTop = Math.min(Math.max(0, newTop), maxTop);
+        
         el.style.left = newLeft + "px";
         el.style.top = newTop + "px";
     }
-    function closeDrag(e) {
+
+    function closeDrag() {
         document.onpointerup = null;
         document.onpointermove = null;
         document.onpointercancel = null;
         el.style.cursor = "grab";
+        
         const key = el.dataset.key;
-        if (key && currentKelas) {
-            const updated = { top: el.style.top, left: el.style.left };
+        if (key && currentKelas && isDragging) {
+            const container = el.parentElement;
+            // Ubah posisi piksel ke persentase
+            const topPerc = (el.offsetTop / container.clientHeight) * 100;
+            const leftPerc = (el.offsetLeft / container.clientWidth) * 100;
+
+            const updated = {
+                top: `${topPerc}%`,
+                left: `${leftPerc}%`
+            };
+            
             update(ref(db, `pohon/${currentKelas}/${key}`), updated).catch(console.error);
         }
-        setTimeout(() => isDragging = false, 50); // Setel ulang flag setelah jeda singkat
+        
+        // Reset flag isDragging setelah selesai, dengan sedikit delay
+        setTimeout(() => isDragging = false, 50);
     }
 }
 
-// === popup logic ===
+
 // === popup logic ===
 function showAspirationPopup(citaKey, originalCita, leafColor) {
-  const explanation = citaCitaData[citaKey] || "Maaf, penjelasan untuk cita-cita ini belum tersedia.";
-  const color = sweetAlertColorMap[leafColor] || sweetAlertColorMap.green;
-  
-  let iconHtml = '<span>🌟</span>';
-  if (citaKey.includes('koki')) { iconHtml = '<span>👨‍🍳</span>';
-  } else if (citaKey.includes('petani')) { iconHtml = '<span>🧑‍🌾</span>';
-  } else if (citaKey.includes('montir')) { iconHtml = '<span>🔧</span>';
-  } else if (citaKey.includes('penjaga kebun binatang')) { iconHtml = '<span>🦓</span>';
-  } else if (citaKey.includes('petugas pemadam kebakaran')) { iconHtml = '<span>👨‍🚒</span>';
-  } else if (citaKey.includes('guru')) { iconHtml = '<span>👩‍🏫</span>';
-  } else if (citaKey.includes('perawat')) { iconHtml = '<span>👩‍⚕️</span>';
-  } else if (citaKey.includes('dokter hewan')) { iconHtml = '<span>🐶</span>';
-  } else if (citaKey.includes('pelatih hewan')) { iconHtml = '<span>🐬</span>';
-  } else if (citaKey.includes('polisi')) { iconHtml = '<span>👮</span>';
-  } else if (citaKey.includes('musisi')) { iconHtml = '<span>🎸</span>';
-  } else if (citaKey.includes('penulis')) { iconHtml = '<span>✍️</span>';
-  } else if (citaKey.includes('aktor/aktris')) { iconHtml = '<span>🎭</span>';
-  } else if (citaKey.includes('fotografer')) { iconHtml = '<span>📸</span>';
-  } else if (citaKey.includes('desainer mode')) { iconHtml = '<span>👗</span>';
-  } else if (citaKey.includes('pelatih olahraga')) { iconHtml = '<span>⛹️</span>';
-  } else if (citaKey.includes('pengacara')) { iconHtml = '<span>⚖️</span>';
-  } else if (citaKey.includes('manajer')) { iconHtml = '<span>💼</span>';
-  } else if (citaKey.includes('pemilik toko')) { iconHtml = '<span>🏪</span>';
-  } else if (citaKey.includes('pemandu wisata')) { iconHtml = '<span>🗺️</span>';
-  } else if (citaKey === 'dokter') { iconHtml = '<span>🩺</span>';
-  } else if (citaKey.includes('astronom')) { iconHtml = '<span>🔭</span>';
-  } else if (citaKey.includes('peneliti')) { iconHtml = '<span>🔬</span>';
-  } else if (citaKey.includes('detektif')) { iconHtml = '<span>🕵️</span>';
-  } else if (citaKey.includes('apoteker')) { iconHtml = '<span>💊</span>';
-  } else if (citaKey.includes('pegawai bank')) { iconHtml = '<span>🏦</span>';
-  } else if (citaKey.includes('pustakawan')) { iconHtml = '<span>📚</span>';
-  } else if (citaKey.includes('sekretaris')) { iconHtml = '<span>📝</span>';
-  } else if (citaKey.includes('satpam')) { iconHtml = '<span>💂</span>';
-  }
-  
-  Swal.fire({
-    title: `${iconHtml} ${originalCita}`,
-    html: `
-      <div class="swal-cita-container">
-        <div class="explanation-box">
-          <p>${explanation}</p>
-        </div>
-      </div>
-    `,
-    confirmButtonText: "Tutup",
-    confirmButtonColor: color.button,
-    showCloseButton: true,
-    didOpen: (popup) => {
-      popup.style.background = color.background;
-      const titleEl = popup.querySelector('.swal2-title');
-      const htmlEl = popup.querySelector('.swal2-html-container');
-      if(titleEl) titleEl.style.color = color.title;
-      // Perhatikan di sini, kita menargetkan .explanation-box
-      const explanationBoxEl = popup.querySelector('.explanation-box');
-      if(explanationBoxEl) explanationBoxEl.style.color = color.text;
+    const explanation = citaCitaData[citaKey] || "Maaf, penjelasan untuk cita-cita ini belum tersedia.";
+    const color = sweetAlertColorMap[leafColor] || sweetAlertColorMap.green;
+    
+    let iconHtml = '<span>🌟</span>';
+    if (citaKey.includes('koki')) { iconHtml = '<span>👨‍🍳</span>';
+    } else if (citaKey.includes('petani')) { iconHtml = '<span>🧑‍🌾</span>';
+    } else if (citaKey.includes('montir')) { iconHtml = '<span>🔧</span>';
+    } else if (citaKey.includes('penjaga kebun binatang')) { iconHtml = '<span>🦓</span>';
+    } else if (citaKey.includes('petugas pemadam kebakaran')) { iconHtml = '<span>👨‍🚒</span>';
+    } else if (citaKey.includes('guru')) { iconHtml = '<span>👩‍🏫</span>';
+    } else if (citaKey.includes('perawat')) { iconHtml = '<span>👩‍⚕️</span>';
+    } else if (citaKey.includes('dokter hewan')) { iconHtml = '<span>🐶</span>';
+    } else if (citaKey.includes('pelatih hewan')) { iconHtml = '<span>🐬</span>';
+    } else if (citaKey.includes('polisi')) { iconHtml = '<span>👮</span>';
+    } else if (citaKey.includes('musisi')) { iconHtml = '<span>🎸</span>';
+    } else if (citaKey.includes('penulis')) { iconHtml = '<span>✍️</span>';
+    } else if (citaKey.includes('aktor/aktris')) { iconHtml = '<span>🎭</span>';
+    } else if (citaKey.includes('fotografer')) { iconHtml = '<span>📸</span>';
+    } else if (citaKey.includes('desainer mode')) { iconHtml = '<span>👗</span>';
+    } else if (citaKey.includes('pelatih olahraga')) { iconHtml = '<span>⛹️</span>';
+    } else if (citaKey.includes('pengacara')) { iconHtml = '<span>⚖️</span>';
+    } else if (citaKey.includes('manajer')) { iconHtml = '<span>💼</span>';
+    } else if (citaKey.includes('pemilik toko')) { iconHtml = '<span>🏪</span>';
+    } else if (citaKey.includes('pemandu wisata')) { iconHtml = '<span>🗺️</span>';
+    } else if (citaKey === 'dokter') { iconHtml = '<span>🩺</span>';
+    } else if (citaKey.includes('astronom')) { iconHtml = '<span>🔭</span>';
+    } else if (citaKey.includes('peneliti')) { iconHtml = '<span>🔬</span>';
+    } else if (citaKey.includes('detektif')) { iconHtml = '<span>🕵️</span>';
+    } else if (citaKey.includes('apoteker')) { iconHtml = '<span>💊</span>';
+    } else if (citaKey.includes('pegawai bank')) { iconHtml = '<span>🏦</span>';
+    } else if (citaKey.includes('pustakawan')) { iconHtml = '<span>📚</span>';
+    } else if (citaKey.includes('sekretaris')) { iconHtml = '<span>📝</span>';
+    } else if (citaKey.includes('satpam')) { iconHtml = '<span>💂</span>';
     }
-  });
+    
+    Swal.fire({
+        title: `${iconHtml} ${originalCita}`,
+        html: `
+            <div class="swal-cita-container">
+                <div class="explanation-box">
+                    <p>${explanation}</p>
+                </div>
+            </div>
+        `,
+        confirmButtonText: "Tutup",
+        confirmButtonColor: color.button,
+        showCloseButton: true,
+        didOpen: (popup) => {
+            popup.style.background = color.background;
+            const titleEl = popup.querySelector('.swal2-title');
+            const explanationBoxEl = popup.querySelector('.explanation-box');
+            if(titleEl) titleEl.style.color = color.title;
+            if(explanationBoxEl) explanationBoxEl.style.color = color.text;
+        }
+    });
 }
 
 // === customCita logic ===
@@ -533,27 +556,25 @@ resetTreeBtn.onclick = () => {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
-            remove(ref(db, `pohon/${currentKelas}`))
-                .then(() => {
-                    Swal.fire('Berhasil!', 'Pohon cita-cita telah di-reset.', 'success');
-                })
-                .catch((err) => {
-                    Swal.fire('Gagal!', 'Reset pohon gagal.', 'error');
-                    console.error("Reset gagal:", err);
-                });
+            remove(ref(db, `pohon/${currentKelas}`));
+            Swal.fire(
+                'Direset!',
+                'Pohon sudah kosong.',
+                'success'
+            );
         }
     });
 };
 
-// === helper clearLeaves ===
-function clearLeaves() {
-    leavesData = [];
-    renderLeaves();
+function escapeHtml(unsafe) {
+    return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-// === small util to escape HTML ===
-function escapeHtml(unsafe) {
-    return (unsafe + "").replace(/[&<>"']/g, function (m) {
-        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]);
-    });
+function clearLeaves() {
+    if (unsubscribeListener) {
+        unsubscribeListener();
+        unsubscribeListener = null;
+    }
+    leavesContainer.innerHTML = "";
+    leavesData = [];
 }
